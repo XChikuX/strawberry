@@ -218,11 +218,38 @@ def type(
             if field_name in fields_set
         ]
 
+        # Helper function to add default to Private fields not in model
+        def get_field_with_default(
+            dataclass_field: dataclasses.Field, model_field_names: set[str]
+        ) -> dataclasses.Field:
+            """Add default to Private fields not in pydantic model and without default."""
+            field = dataclass_field
+            # Only add default if:
+            # 1. Field is Private
+            # 2. Field doesn't exist in pydantic model
+            # 3. Field doesn't have a default value or default factory
+            if (
+                is_private(field.type)
+                and field.name not in model_field_names
+                and field.default is dataclasses.MISSING
+                and field.default_factory is dataclasses.MISSING  # type: ignore
+            ):
+                # Add default=None to make it optional
+                return dataclasses.field(
+                    default=None,
+                    init=field.init,
+                    repr=field.repr,
+                    compare=field.compare,
+                    metadata=field.metadata,
+                    kw_only=field.kw_only,  # type: ignore
+                )
+            return field
+
         all_model_fields = [
             DataclassCreationFields(
                 name=field.name,
                 field_type=field.type,  # type: ignore
-                field=field,
+                field=get_field_with_default(field, set(model_fields.keys())),
             )
             for field in extra_fields + private_fields
             if field.name not in fields_set

@@ -2,7 +2,6 @@
 
 from typing import Any
 
-import pytest
 from pydantic import BaseModel
 
 import strawberry
@@ -30,8 +29,8 @@ def test_private_field_from_pydantic_with_extra():
     assert strawberry_user.password == "secret123"
 
 
-def test_private_field_from_pydantic_without_extra_raises_error():
-    """Test that from_pydantic raises TypeError when Private field is not provided."""
+def test_private_field_without_default_in_model_is_optional():
+    """Test that Private fields not in pydantic model are optional (default=None)."""
 
     class UserModel(BaseModel):
         name: str
@@ -43,11 +42,11 @@ def test_private_field_from_pydantic_without_extra_raises_error():
 
     pydantic_user = UserModel(name="Bob")
 
-    # Should raise TypeError because password is required but not provided
-    with pytest.raises(TypeError) as exc_info:
-        User.from_pydantic(pydantic_user)
+    # Should NOT raise TypeError - Private fields not in model should be optional
+    strawberry_user = User.from_pydantic(pydantic_user)
 
-    assert "password" in str(exc_info.value)
+    assert strawberry_user.name == "Bob"
+    assert strawberry_user.password is None
 
 
 def test_private_field_from_pydantic_multiple_private_fields():
